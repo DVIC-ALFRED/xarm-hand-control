@@ -3,6 +3,7 @@ import os
 from collections import deque
 from statistics import mode
 from typing import Any, Callable, Tuple, Union
+from queue import Queue
 
 import cv2
 import joblib
@@ -230,26 +231,19 @@ def get_robot_command(x: float, y: float) -> Command:
         Command: Command NamedTuple containing fields for xArm move command
     """
 
-    command = Command()
-
     dist = np.linalg.norm([x, y], ord=2)
 
     # if center of palm is inside center circle
     if dist < 0.1:
-        empty_command = Command()
-        return empty_command
+        return None
 
-    scaled_x = x * ROBOT_COMMAND_SCALE
-    scaled_y = y * ROBOT_COMMAND_SCALE
 
-    command = Command(
-        x=scaled_x,
-        y=scaled_y,
-        speed=ROBOT_SPEED,
-        mvacc=ROBOT_MVACC
-    )
+    return [x, y]
 
-    return command
+
+def send_robot_command(command_queue: Queue, command: list):
+    if command_queue is not None:
+        command_queue.put(command, block=False)
 
 
 def run_processing(classification_mode: ClassificationMode, classes: dict, model: Any, image: Any, landmarks: list
@@ -345,6 +339,7 @@ def add_image_info(image, top_left_text, bottom_left_text):
 
 def process(classification_mode: ClassificationMode = ClassificationMode.NO_CLASSIFICATION,
             video_index: int = 0,
+            robot_command_queue: Queue = None,
             dataset_path: os.PathLike = None,
             model_path: os.PathLike = None
             ):
@@ -354,11 +349,6 @@ def process(classification_mode: ClassificationMode = ClassificationMode.NO_CLAS
     Raises:
         IOError: if OpenCV can't access camera
     """
-    # global MODE
-    # MODE = classification_mode
-
-    # global VIDEO_INDEX
-    # VIDEO_INDEX = video_index
 
     inner_fps = FPS()
     outer_fps = FPS()
@@ -404,6 +394,8 @@ def process(classification_mode: ClassificationMode = ClassificationMode.NO_CLAS
 
             to_show_text, robot_command = run_processing(
                 classification_mode, classes, model, to_show, landmarks)
+
+            send_robot_command(robot_command_queue, robot_command)
 
             inner_fps.update()
             outer_fps.update()

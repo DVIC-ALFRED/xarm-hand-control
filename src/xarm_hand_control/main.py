@@ -1,16 +1,19 @@
 import os
+from queue import Queue
 
 from xarm_hand_control.modules.utils import ClassificationMode
 
 
 def process(classification_mode: ClassificationMode = ClassificationMode.NO_CLASSIFICATION,
             video_index: int = 0,
+            robot_command_queue: Queue = None,
             dataset_path: os.PathLike = None,
             model_path: os.PathLike = None):
 
     import xarm_hand_control.modules.processing.process as mpp
 
-    mpp.process(classification_mode, video_index, dataset_path, model_path)
+    mpp.process(classification_mode, video_index,
+                robot_command_queue, dataset_path, model_path)
 
 
 def train(dataset_dir: os.PathLike,
