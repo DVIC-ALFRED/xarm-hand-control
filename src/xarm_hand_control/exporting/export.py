@@ -3,7 +3,7 @@ import json
 
 import torch
 
-from xarm_hand_control.modules.training.model import HandsClassifier
+from xarm_hand_control.training.model import HandsClassifier
 
 
 def export(dataset_path: os.PathLike,
