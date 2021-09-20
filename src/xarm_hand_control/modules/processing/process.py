@@ -237,7 +237,6 @@ def get_robot_command(x: float, y: float) -> Command:
     if dist < 0.1:
         return None
 
-
     return [x, y]
 
 
@@ -407,7 +406,10 @@ def process(classification_mode: ClassificationMode = ClassificationMode.NO_CLAS
             add_image_info(to_show, fpss, to_show_text)
 
             cv2.imshow(WINDOW_NAME, to_show)
-            cv2.waitKey(1)
+
+            k = cv2.waitKey(1)
+            if k == 27:
+                raise KeyboardInterrupt
 
     except KeyboardInterrupt:
         cap.release()
