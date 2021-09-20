@@ -4,6 +4,8 @@ import time
 from queue import Queue
 import sys
 
+import numpy as np
+
 import xarm_hand_control as xhc
 from xarm.wrapper import XArmAPI
 from xarm_hand_control.modules.utils import ClassificationMode
@@ -11,7 +13,7 @@ from xarm_hand_control.modules.utils import ClassificationMode
 VIDEO_INDEX=4
 ARM_IP = "172.21.72.200"
 
-arm = None
+arm: XArmAPI = None
 
 COMMAND_QUEUE = Queue()
 
@@ -38,10 +40,11 @@ def robot_start() -> XArmAPI:
         except:
             print("arm is not online. trying again in 3 seconds...")
             time.sleep(3)
-    
+
     arm.set_world_offset([0, 0, 0, 0, 0, 0])
     time.sleep(1)
 
+    arm.clean_error()
     arm.motion_enable(enable=True)
     arm.set_mode(0)
     arm.set_state(state=0)
@@ -55,17 +58,28 @@ def robot_start() -> XArmAPI:
     return arm
 
 def worker(arm: XArmAPI):
+    SKIPPED_COMMANDS = 15
     counter = 0
+
+    goal_pos = arm.position
+
     while True:
         item = COMMAND_QUEUE.get()
         counter += 1
-        if item is not None and counter > 7:
-            print(f'Working on {item}')
+        if item is not None and counter > SKIPPED_COMMANDS:
+            # print(f'Working on {item}')
 
-            COEFF=30
+            COEFF = 50
             x = item[0] * COEFF
             z = item[1] * COEFF
-            ret = arm.set_position(x, 0, z, 0, 0, 0, wait=False, relative=True)
+
+            goal_pos[0] += x
+            goal_pos[2] += z
+
+            speed = np.linalg.norm(item, ord=2) * COEFF * 5
+            # speed = np.log(speed) * COEFF
+            mvacc = speed * 10
+            ret = arm.set_position(*goal_pos, speed=speed, mvacc=mvacc, wait=False, relative=False)
             if ret < 0:
                 print("error")
 

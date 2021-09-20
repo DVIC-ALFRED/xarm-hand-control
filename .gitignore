@@ -3,6 +3,7 @@ models*
 output
 tests
 portable
+*.jpeg
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
