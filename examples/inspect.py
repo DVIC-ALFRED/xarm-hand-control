@@ -13,6 +13,9 @@ from xarm.wrapper import XArmAPI
 VIDEO_INDEX=4
 ARM_IP = "172.21.72.200"
 
+speed=40
+mvacc=10000
+
 arm: XArmAPI = None
 
 COMMAND_QUEUE = Queue()
@@ -49,8 +52,9 @@ def robot_start() -> XArmAPI:
     arm.set_mode(0)
     arm.set_state(state=0)
 
-    ret = arm.set_position(206.9, 0, 258.7, 180, 0,0,
-        radius=-1, is_radian=False, wait=True, speed=20, mvacc=10000, relative=False)
+    init_pos=[206.9, 0, 258.7, 180, 0,0]
+    ret = arm.set_position(*init_pos,
+        radius=-1, is_radian=False, wait=True, speed=speed, mvacc=mvacc, relative=False)
 
     time.sleep(1)
     print("arm started")
@@ -58,38 +62,24 @@ def robot_start() -> XArmAPI:
     return arm
 
 def worker(arm: XArmAPI):
-    SKIPPED_COMMANDS = 15
-    counter = 0
-
-    goal_pos = arm.position
-
-    while True:
-        item = COMMAND_QUEUE.get()
-        counter += 1
-        if item is not None and counter > SKIPPED_COMMANDS:
-            # print(f'Working on {item}')
-
-            COEFF = 50
-            x = item[0] * COEFF
-            z = item[1] * COEFF
-
-            goal_pos[0] += x
-            goal_pos[2] += z
-
-            speed = np.linalg.norm(item, ord=2) * COEFF * 5
-            # speed = np.log(speed) * COEFF
-            mvacc = speed * 10
-            ret = arm.set_position(*goal_pos, speed=speed, mvacc=mvacc, wait=False, relative=False)
-            if ret < 0:
-                print("error")
-
-            counter = 0
-
-        COMMAND_QUEUE.task_done()
+    radius=-1
+    #arm.set_servo_angle(1,100,speed,mvacc,wait=False,radius=radius)
+    pos=arm.position
+    pos=[round(num, 1) for num in pos]
+    x,y=pos[0],pos[1]
+    length=np.sqrt(x**2+y**2)
+    angle=100*np.pi/180
+    x,y=length*np.cos(angle),length*np.sin(angle)
+    new_pos=[x,y]+pos[2::]
+    arm.set_position(*new_pos,radius=radius, wait=True, speed=speed,mvacc=mvacc,relative=False)
+    new_pos[2]+=100
+    arm.set_position(*new_pos,radius=radius, wait=True, speed=speed,mvacc=mvacc,relative=False)
+    
 
 
 def main():
     arm = robot_start()
+    worker(arm)
     # arm = ""
     """
     threading.Thread(target=worker, args=[arm, ], daemon=True).start()
