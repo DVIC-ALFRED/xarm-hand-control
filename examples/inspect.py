@@ -4,14 +4,16 @@ import time
 from queue import Queue
 import sys
 
+import numpy as np
+
 import xarm_hand_control as xhc
 from xarm.wrapper import XArmAPI
-from xarm_hand_control.modules.utils import ClassificationMode
+
 
 VIDEO_INDEX=4
 ARM_IP = "172.21.72.200"
 
-arm = None
+arm: XArmAPI = None
 
 COMMAND_QUEUE = Queue()
 
@@ -27,7 +29,7 @@ signal.signal(signal.SIGINT, sigint_handler)
 
 
 def robot_start() -> XArmAPI:
-    arm = "dummy"
+    arm = "ALFRED"
 
     connected = False
     while not connected:
@@ -38,34 +40,46 @@ def robot_start() -> XArmAPI:
         except:
             print("arm is not online. trying again in 3 seconds...")
             time.sleep(3)
-    
+
     arm.set_world_offset([0, 0, 0, 0, 0, 0])
     time.sleep(1)
 
+    arm.clean_error()
     arm.motion_enable(enable=True)
     arm.set_mode(0)
     arm.set_state(state=0)
 
-    ret = arm.set_position(0, -227.8, 643.9, 0, -90, 90,
-        radius=-1, is_radian=False, wait=True, speed=100, mvacc=10000, relative=False)
-    arm.set_position(0,)
+    ret = arm.set_position(206.9, 0, 258.7, 180, 0,0,
+        radius=-1, is_radian=False, wait=True, speed=20, mvacc=10000, relative=False)
+
     time.sleep(1)
     print("arm started")
 
     return arm
 
 def worker(arm: XArmAPI):
+    SKIPPED_COMMANDS = 15
     counter = 0
+
+    goal_pos = arm.position
+
     while True:
         item = COMMAND_QUEUE.get()
         counter += 1
-        if item is not None and counter > 7:
-            print(f'Working on {item}')
+        if item is not None and counter > SKIPPED_COMMANDS:
+            # print(f'Working on {item}')
 
-            COEFF=30
+            COEFF = 50
             x = item[0] * COEFF
             z = item[1] * COEFF
-            ret = arm.set_position(x, 0, z, 0, 0, 0, wait=False, relative=True)
+
+            goal_pos[0] += x
+            goal_pos[2] += z
+
+            speed = np.linalg.norm(item, ord=2) * COEFF * 5
+            # speed = np.log(speed) * COEFF
+            mvacc = speed * 10
+            ret = arm.set_position(*goal_pos, speed=speed, mvacc=mvacc, wait=False, relative=False)
             if ret < 0:
                 print("error")
 
@@ -77,6 +91,7 @@ def worker(arm: XArmAPI):
 def main():
     arm = robot_start()
     # arm = ""
+    """
     threading.Thread(target=worker, args=[arm, ], daemon=True).start()
 
     xhc.process(
@@ -88,7 +103,7 @@ def main():
     )
 
     COMMAND_QUEUE.join()
-
+    """
 
 if __name__ == "__main__":
     main()
