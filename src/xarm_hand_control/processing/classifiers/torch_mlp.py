@@ -1,4 +1,6 @@
+import collections
 import os
+from statistics import mode
 from typing import Iterable, List, Tuple
 
 import torch
@@ -11,8 +13,14 @@ class TorchMLP(Classifier):
 
     model: torch.nn.Module
     model_path: os.PathLike
-    n_classes: int
     classes: list
+    buffer_size: int
+    classification_buffer: collections.deque
+    n_classes: int
+
+    def __init__(self, buffer_size: int = 5):
+        self.buffer_size = buffer_size
+        self.classification_buffer = collections.deque(maxlen=buffer_size)
 
     def load_model(self, model_path: os.PathLike, classes: list) -> None:
         self.model_path = model_path
@@ -41,12 +49,19 @@ class TorchMLP(Classifier):
 
         return ret
 
-    def run_classification(self, data: List[torch.Tensor]) -> Tuple[dict]:
+    def run_classification(self, data: List[torch.Tensor]) -> Tuple[str]:
         ret = []
 
         for item in data:
             result_one = torch.argmax(self.model(item)).item()
 
-            ret.append({"index": result_one, "class_name": self.classes[result_one]["name"]})
+            ret.append(self.classes[result_one]["name"])
 
-        return tuple(ret)
+        ret = tuple(ret)
+
+        self.classification_buffer.appendleft(ret)
+
+        return ret
+
+    def get_most_common(self) -> Tuple[str]:
+        return mode(self.classification_buffer)

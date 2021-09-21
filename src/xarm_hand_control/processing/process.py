@@ -1,48 +1,18 @@
-import json
-import os
 from collections import deque
-from statistics import mode
-from typing import Any, Callable, Iterable, List, Literal, NamedTuple, Tuple, Union
-from queue import Queue
+from typing import Any, Callable, Iterable, List, Tuple
 
 import cv2
 import mediapipe as mp
 import numpy as np
 
 from xarm_hand_control.processing.classifier_base import Classifier
-from xarm_hand_control.utils import FPS, ClassificationMode, Command
-
-# * -------------------------------------------------------------------------
-# * PROGRAM PARAMETERS
-# * -------------------------------------------------------------------------
-ROBOT_COMMAND_SCALE = 100
-ROBOT_SPEED = 100.0
-ROBOT_MVACC = 1000.0
-# * -------------------------------------------------------------------------
+from xarm_hand_control.utils import FPS
 
 WINDOW_NAME = "Hand Control"
-
-classification_buffer = deque(maxlen=5)
 
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
 drawing_styles = mp.solutions.drawing_styles
-
-
-def run_inference(
-    classifier: Classifier,
-    landmarks: Iterable,
-) -> list:
-
-    f_data = classifier.format_data(data=landmarks)
-    classified_data = classifier.run_classification(f_data)
-
-    # add to buffer and return most common occurence in last n frames
-    classification_buffer.appendleft(
-        tuple([item["class_name"] for item in classified_data])
-    )
-
-    return mode(classification_buffer)
 
 
 def run_hands(image: Any, hands: mp_hands.Hands) -> Tuple[Any, list]:
@@ -96,33 +66,16 @@ def get_center_coords(landmarks: list) -> List[float]:
     return x, y
 
 
-def run_processing(
-    classifier: Classifier, landmarks: Iterable
-) -> Tuple[str, List[float]]:
+def classify_hands(classifier: Classifier, landmarks: Iterable) -> Tuple[str]:
+    if classifier is None:
+        return None
 
-    if landmarks is None:
-        return "", None
+    f_data = classifier.format_data(landmarks)
+    classifier.run_classification(f_data)
 
-    if classifier is not None:
-        classified_hands = run_inference(classifier, landmarks)
-    else:
-        classified_hands = None
+    classified_hands = classifier.get_most_common()
 
-    center_coords = get_center_coords(landmarks)
-    x, y = center_coords
-
-    if classified_hands is None:
-        to_show_text = f"{x:.2f}, {y:.2f}"
-    else:
-        classified_hands = ", ".join(classified_hands)
-        to_show_text = " | ".join(
-            [
-                classified_hands,
-                f"{x:.2f}, {y:.2f}",
-            ]
-        )
-
-    return to_show_text, center_coords
+    return classified_hands
 
 
 def add_image_info(image, top_left_text, bottom_left_text):
@@ -165,7 +118,7 @@ def add_image_info(image, top_left_text, bottom_left_text):
     cv2.circle(img=image, center=im_center, radius=3, color=(0, 0, 255), thickness=3)
 
 
-def process(
+def loop(
     cap: Any,
     classifier: Classifier = None,
     coords_extracter_func: Callable = None,
@@ -174,6 +127,8 @@ def process(
 
     inner_fps = FPS()
     outer_fps = FPS()
+
+    to_show_text = ""
 
     _ = cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_AUTOSIZE)
 
@@ -197,10 +152,25 @@ def process(
             inner_fps.update()
 
             ret_frame, landmarks = run_hands(frame, hands)
-            to_show_text, center_coords = run_processing(classifier, landmarks)
 
-            if coords_extracter_func is not None:
-                coords_extracter_func(center_coords)
+            if landmarks is not None:
+                classified_hands = classify_hands(classifier, landmarks)
+
+                hand_center_x, hand_center_y = get_center_coords(landmarks)
+
+                if classified_hands is None:
+                    to_show_text = f"{hand_center_x:.2f}, {hand_center_y:.2f}"
+                else:
+                    classified_hands = ", ".join(classified_hands)
+                    to_show_text = " | ".join(
+                        [
+                            classified_hands,
+                            f"{hand_center_x:.2f}, {hand_center_y:.2f}",
+                        ]
+                    )
+
+                if coords_extracter_func is not None:
+                    coords_extracter_func([hand_center_x, hand_center_y])
 
             to_show = cv2.flip(frame, 1) if ret_frame is None else ret_frame
 

@@ -7,7 +7,7 @@ VIDEO_PATH = "/dev/video0"
 def main():
     cap = cv2.VideoCapture(VIDEO_PATH)
 
-    xhcpp.process(cap)
+    xhcpp.loop(cap)
 
 
 if __name__ == "__main__":

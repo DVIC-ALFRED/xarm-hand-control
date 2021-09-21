@@ -21,7 +21,7 @@ def main():
     cap = cv2.VideoCapture(VIDEO_PATH)
 
 
-    xhcpp.process(
+    xhcpp.loop(
         cap,
         classifier=classifier,
         max_num_hands=2

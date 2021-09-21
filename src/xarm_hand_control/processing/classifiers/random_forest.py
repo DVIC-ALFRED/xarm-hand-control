@@ -1,5 +1,7 @@
+import collections
 import os
-from typing import Iterable, List, Tuple
+from statistics import mode
+from typing import Any, Iterable, List, Tuple
 
 import joblib
 import numpy as np
@@ -9,8 +11,15 @@ from xarm_hand_control.processing.classifier_base import Classifier
 class RandomForest(Classifier):
     """Classifier with a Multi-layer Percptron using ONNX."""
 
+    model: Any
     model_path: os.PathLike
     classes: list
+    buffer_size: int
+    classification_buffer: collections.deque
+
+    def __init__(self, buffer_size: int = 5):
+        self.buffer_size = buffer_size
+        self.classification_buffer = collections.deque(maxlen=buffer_size)
 
     def load_model(self, model_path: os.PathLike, classes: list) -> None:
         self.model_path = model_path
@@ -36,12 +45,19 @@ class RandomForest(Classifier):
 
         return ret
 
-    def run_classification(self, data: List[np.ndarray]) -> Tuple[dict]:
+    def run_classification(self, data: List[np.ndarray]) -> Tuple[str]:
         ret = []
 
         for item in data:
             result_one = self.model.predict(item)[0]
 
-            ret.append({"index": result_one, "class_name": self.classes[result_one]["name"]})
+            ret.append(self.classes[result_one]["name"])
 
-        return tuple(ret)
+        ret = tuple(ret)
+
+        self.classification_buffer.appendleft(ret)
+
+        return ret
+
+    def get_most_common(self) -> Tuple[str]:
+        return mode(self.classification_buffer)
