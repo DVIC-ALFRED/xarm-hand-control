@@ -74,12 +74,16 @@ def worker(arm: XArmAPI):
     arm.set_position(*new_pos,radius=radius, wait=True, speed=speed,mvacc=mvacc,relative=False)
     new_pos[2]+=100
     arm.set_position(*new_pos,radius=radius, wait=True, speed=speed,mvacc=mvacc,relative=False)
-    
 
+def worker2(arm: XArmAPI):
+    arm.set_servo_angle(1,20,speed=speed,mvacc=mvacc,wait=True)
+    pos=arm.position
+    pos=[round(num, 1) for num in pos]
+    print(pos)
 
 def main():
     arm = robot_start()
-    worker(arm)
+    worker2(arm)
     # arm = ""
     """
     threading.Thread(target=worker, args=[arm, ], daemon=True).start()
