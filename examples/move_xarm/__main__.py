@@ -58,7 +58,8 @@ def robot_start() -> XArmAPI:
     return arm
 
 def worker(arm: XArmAPI):
-    SKIPPED_COMMANDS = 15
+    SKIPPED_COMMANDS = 10
+    COEFF = 22
     counter = 0
 
     goal_pos = arm.position
@@ -69,7 +70,6 @@ def worker(arm: XArmAPI):
         if item is not None and counter > SKIPPED_COMMANDS:
             # print(f'Working on {item}')
 
-            COEFF = 50
             x = item[0] * COEFF
             z = item[1] * COEFF
 
