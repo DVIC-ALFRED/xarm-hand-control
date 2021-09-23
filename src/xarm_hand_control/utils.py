@@ -27,14 +27,14 @@ class FPS:
 
     def fps(self) -> float:
         # compute the (approximate) frames per second
-        fps =  1. / (self._new_time_frame - self._prev_time_frame)
+        fps = 1.0 / (self._new_time_frame - self._prev_time_frame)
         self.buffer.appendleft(fps)
         return mean(self.buffer)
 
 
 class ProgramMode(Enum):
-    """main_training.py mode enum
-    """
+    """main_training.py mode enum"""
+
     NONE = auto()
     PROCESS = auto()
     TRAIN = auto()
@@ -54,8 +54,8 @@ class ProgramMode(Enum):
 
 
 class ClassificationMode(Enum):
-    """main_procesing.py mode enum
-    """
+    """main_procesing.py mode enum"""
+
     NO_CLASSIFICATION = auto()
     RANDOM_FOREST = auto()
     MLP = auto()
@@ -73,7 +73,7 @@ class ClassificationMode(Enum):
         return ret
 
 
-_command_fields = ['x', 'y', 'z', 'roll', 'pitch', 'yaw', 'speed', 'mvacc']
-Command = namedtuple(typename='Command',
-                     field_names=_command_fields,
-                     defaults=[None]*8)
+_command_fields = ["x", "y", "z", "roll", "pitch", "yaw", "speed", "mvacc"]
+Command = namedtuple(
+    typename="Command", field_names=_command_fields, defaults=[None] * 8
+)
