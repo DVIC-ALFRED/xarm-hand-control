@@ -5,7 +5,7 @@ import torch.nn as nn
 class HandsClassifier(nn.Module):
     """Classifier Model
     """
-    def __init__(self, n_classes):
+    def __init__(self, n_classes: int):
         super(HandsClassifier, self).__init__()
         self.n_classes = n_classes
 

@@ -4,7 +4,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="xarm_hand_control",
+    name="xarm-hand-control",
     version="0.0.1",
     author="Dimitri VINET",
     author_email="dimitri.vinet@outlook.com",
