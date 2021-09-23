@@ -76,7 +76,7 @@ def worker(arm: XArmAPI):
     arm.set_position(*new_pos,radius=radius, wait=True, speed=speed,mvacc=mvacc,relative=False)
 
 def worker2(arm: XArmAPI):
-    arm.set_servo_angle(1,20,speed=speed,mvacc=mvacc,wait=True)
+    arm.set_servo_angle(1,90,speed=speed,mvacc=mvacc,wait=True)
     pos=arm.position
     pos=[round(num, 1) for num in pos]
     print(pos)
