@@ -1,16 +1,15 @@
 import signal
+import sys
 import threading
 import time
 from queue import Queue
-import sys
 
+import cv2
 import numpy as np
-
-import xarm_hand_control as xhc
+import xarm_hand_control.processing.process as xhcpp
 from xarm.wrapper import XArmAPI
-from xarm_hand_control.modules.utils import ClassificationMode
 
-VIDEO_INDEX = 4
+VIDEO_PATH = "/dev/video4"
 ARM_IP = "172.21.72.200"
 
 arm: XArmAPI = None
@@ -65,14 +64,12 @@ def robot_start() -> XArmAPI:
         mvacc=10000,
         relative=False,
     )
-
     time.sleep(1)
     print("arm started")
 
     return arm
 
-
-def worker(arm: XArmAPI):
+def worker(arm):
     SKIPPED_COMMANDS = 10
     COEFF = 22
     counter = 0
@@ -105,6 +102,10 @@ def worker(arm: XArmAPI):
         COMMAND_QUEUE.task_done()
 
 
+def post_command(data):
+    COMMAND_QUEUE.put(data)
+
+
 def main():
     arm = robot_start()
     # arm = ""
@@ -116,12 +117,11 @@ def main():
         daemon=True,
     ).start()
 
-    xhc.process(
-        classification_mode=ClassificationMode.NO_CLASSIFICATION,
-        video_index=VIDEO_INDEX,
-        robot_command_queue=COMMAND_QUEUE,
-        dataset_path=None,
-        model_path=None,
+    cap = cv2.VideoCapture(VIDEO_PATH)
+
+    xhcpp.loop(
+        cap,
+        coords_extracter_func=post_command
     )
 
     COMMAND_QUEUE.join()
